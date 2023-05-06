@@ -1,0 +1,109 @@
+*Tianyi Li ECO231W Data Replication Code
+
+drop if age > 65
+
+drop if age < 25
+
+drop if uhrswork < 36
+
+drop if yrsusa1 <= 1 & bpl == 600
+
+drop if wkswork2 < 5
+
+drop if year == 2016
+
+drop if year < 2011
+
+gen cpiu = 224.939 
+
+replace cpiu = 229.594 if year == 2012
+
+replace cpiu = 232.957 if year == 2013
+
+replace cpiu = 236.736 if year == 2014
+
+replace cpiu = 237.017 if year == 2015
+
+gen realwage = incwage/cpiu * 237.017
+
+*Table 2
+
+gen lessthanHS = 1 if educd < 62
+
+replace lessthanHS = 0 if educd >= 62
+
+gen highsclgrad =1 if educd < 65 & educd > 61
+
+replace highsclgrad =0 if educd >=65 | educd <= 61
+
+gen somecollege = 1 if educd > 65 & educd < 101
+
+replace somecollege = 0 if educd <= 65 | educd >= 101 
+
+gen limiteng = 0 if speakeng == 3 | speakeng == 4 | speakeng == 5
+
+replace limiteng = 1 if speakeng == 1 | speakeng == 6
+
+gen yr1throu9 = 1 if yrsusa1 < 10
+
+replace yr1throu9 = 0 if yrsusa1 >= 10
+
+gen yr10throu19 = 1 if yrsusa1 >= 10 & yrsusa1 < 20
+
+replace yr10throu19 = 0 if yrsusa1 < 10 | yrsusa1 >= 20
+
+gen above20 = 1 if yrsusa1 >= 20
+
+replace above20 = 0 if yrsusa1 < 20
+
+gen African = 1 if bpl == 600
+
+replace African = 0 if bpl <= 120
+
+*African immigrants
+
+sum realwage, detail
+
+bysort educd African: sum realwage,detail
+
+bysort lessthanHS African: sum realwage,detail
+
+bysort somecollege African: sum realwage,detail
+
+bysort highsclgrad African: sum realwage,detail
+
+bysort sex African: sum realwage,detail
+
+bysort citizen African: sum realwage,detail
+
+bysort limiteng African: sum realwage,detail
+
+bysort yr1throu9 African: sum realwage,detail
+
+bysort yr10throu19 African: sum realwage,detail
+
+bysort above20 African: sum realwage,detail
+
+bysort bpld African: sum realwage,detail
+
+bysort colony African: sum realwage,detail
+
+*Table 3 
+
+gen lnrealwage = ln(realwage)
+
+gen Bachelor = 1 if educd == 101
+
+replace Bachelor =0 if educd != 101
+
+gen Master = 1 if educd == 114
+
+replace Master = 0 if educd != 114
+
+gen Professional = 1 if educd == 115
+
+replace Professional =0 if educd != 115
+
+gen Doctor = 1 if educd == 116
+
+replace Docto
