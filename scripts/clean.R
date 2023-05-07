@@ -4,7 +4,7 @@
 ### Title: MDML Final Project (Salary Prediction)
 ### Purpose: Clean raw data
 ### Date: 05-11-2023
-### Input: replication_data.dta
+### Input: census.dta
 ### Output: census_cleaned.csv
 ###
 ##################################################
@@ -25,7 +25,7 @@ library(wbstats)
 # The code book is also avaiable in the page for each specific variables from the IPUMS USA website 
 
 # Read data from the file
-dat <- read_dta("./data/replication_data.dta")
+dat <- read_dta("./data/census.dta")
 
 # Keep a copy of original data for convenience
 census <- dat
