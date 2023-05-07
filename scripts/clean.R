@@ -202,7 +202,7 @@ census_cleaned <- census_cleaned %>%
          speakeng = as.factor(speakeng), 
          educd = as.factor(educd), 
          citizen = as.factor(citizen),
-         wkswork2 = as.factor(citizen)
+         wkswork2 = as.factor(wkswork2)
   )
 
 # Output the cleaned data
