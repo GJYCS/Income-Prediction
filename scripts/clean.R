@@ -105,7 +105,7 @@ census <- census %>%
 census <- census %>% 
   mutate(yrinus = case_when( 
     birthplace == "Africa" ~ year - yrimmig, 
-    birthplace == "USA" ~ year))
+    birthplace == "USA" ~ age))
 
 # Un-select variable yrimming
 census <- census %>% 
