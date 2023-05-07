@@ -30,7 +30,7 @@ dat <- read_dta("./data/replication_data.dta")
 # Keep a copy of original data for convenience
 census <- dat
 
-# Keep 14 useful variables & unselect others
+# Keep 14 useful variables
 census <- dat %>% 
   select(year, sex, age, marst, bpl, 
          bpld, yrimmig, speakeng, educd, 
