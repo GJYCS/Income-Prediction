@@ -84,7 +84,7 @@ census <- census %>%
 
 # Re-code variable of gender
 # 1 is male & 2 is female
-census <- census %>%s
+census <- census %>%
   mutate(sex = case_when(
     sex == 1 ~ "Male",
     sex == 2 ~ "Female"))
