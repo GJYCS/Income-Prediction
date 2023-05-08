@@ -1,1 +1,1 @@
-# Salary-Prediction
+# Income-Prediction
