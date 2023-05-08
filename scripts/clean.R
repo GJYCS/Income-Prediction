@@ -181,11 +181,13 @@ inflation_rates <- inflation_rates %>%
 
 # Merge the inflation data with census data
 # Calculate the adjusted income
-# Unselect the cumulative_inflation_rate
+# Un-select the cumulative_inflation_rate
+# Un-select unscaled income 'incwage'
 merged_data <- merge(census, inflation_rates, by = "year")
 merged_data <- merged_data %>%
   mutate(adjusted_income = incwage * cumulative_inflation_rate) %>% 
-  select(-cumulative_inflation_rate)
+  select(-cumulative_inflation_rate) %>% 
+  select(-incwage)
 
 # Determine whether the adjusted real income is above national median in 2016 (35K USD)
 # Information from FRED Economic Data
@@ -212,5 +214,4 @@ census_cleaned <- census_cleaned %>%
 
 # Output the cleaned data
 write_csv(census_cleaned, "./data/census_cleaned.csv")
-
 
