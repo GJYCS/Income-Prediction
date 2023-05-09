@@ -19,9 +19,7 @@ library(dplyr)
 library(haven)
 library(wbstats)
 library(car)
-library(MASS)
 library(gbm)
-library(pROC)
 
 # Set the seed to 47196
 set.seed(47196)
@@ -38,63 +36,111 @@ names(census)
 # During data cleaning process, we factor 9 variables include: year, sex, marital, birthplace, speakeng, educd, citizen, wkswork2, and outcome
 # The other 4 variables are continuous: age, uhrswork, yrinus, and adjusted_income
 
+# By restating our research question on: 
+# "How is one’s educational attainment and other demographic characteristics associated with his earning performance?"
+# We decided to drop the variable 'year' since we are not aiming to see the change by year
+# Also, we do not want to fit 'adjusted_income' in our model because it has been re-defined as outcome.
+census <- census %>% 
+  select(-year, -adjusted_income) 
+# Now, we have 11 variables. 
+# Factor variables
+census <- census %>% 
+  mutate(outcome = as.factor(outcome))
+
 ##################################################
 
-# Firstly, we want to split the train sets and the test sets
-# We have two different methods:
-
-# Method 1
-# Randomly shuffle census and split it in half, storing the results as train and test sets
-# shuffle census
-census1 <- census[sample(nrow(census)), ]
-# split in half
-census_half <- nrow(census1) / 2
-# Train set 2: The first half
-train1 <- census1[1:census_half, ]
-# Test set 2: The second half
-test1 <- census1[(nrow(train1)+1) : nrow(census1), ]
-
-# Method 2
-# Randomly split census into an 80% train set and a 20% test set
+# First, we want to split the train sets and the test sets
+# We will randomly split census into an 80% train set and a 20% test set (And use the same method for further sampling)
 # Each person should be in either the training or testing set 
 # No person should be divided across the two sets
+
 # shuffle census
-census2 <- census[sample(nrow(census)), ]
+census <- census[sample(nrow(census)), ]
 # Train set 3: 80% of the data
-train2 <- census2 %>% 
-  slice(1 : floor(nrow(census2)*0.8))
+train <- census %>% 
+  slice(1 : floor(nrow(census)*0.8))
 # Test set 3: 20% of the data
-test2 <- census2 %>% 
-  slice(floor(nrow(census2)*0.8)+1 : n())
+test <- census %>% 
+  slice(floor(nrow(census)*0.8)+1 : n())
+
+# Train set has 759776 obs. of 11 variables.
+# Test set has 189944 obs. of 11 variables.
+# The size of our cleaned dataset 'census' is large enough
+# We believe the way of splitting train/test set will not cause much difference in the results
+# Thus, one split method is enough for all models use
+# We can also do a 50%, 50% split, but we believe a large size of train set could enhance our models
+
 ##################################################
 
-# Secondly, we start to model. We will build three different types of models for income predictions
-# Included: GLM (generalized linear model), GBM (Gradient Boosting Machine model), and Random Forest model
+# Second, we start to model. 
+# We will build three different types of models for income predictions\
 
-###Using sampling method 1 as example###
+# Included: 
+# MODEL:
+# GLM (Generalized Linear model), GBM (Generalized Boosted Regression Model), and Random Forest model
+# VARIABLES:
+# sex: female, male
+# age: 18 to 65
+# marital: marriage status
+# birthplace: the location where a person was born
+# speakeng: one's English speaking level
+# educd: one's educational attainment
+# citizen: whether someone is a citizen of the United States
+# yrinus: the length of time someone has lived in the United States
+# outcome: whether one's adjusted real income is above national median in 2016 (35K USD)
 
-###GLM example###
-m1 <- glm(outcome ~ sex + age + marital + educd + wkswork2 + uhrswork + birthplace, 
-          data = train1, family = "binomial")
-summary(m1)
+# Some independent variables may seem overlap (such as birthplace, citizen, and yrinus), but 
+# Each variable measures a distinct aspect of an individual's background and experience
+# These variables could potentially have different effects on our dependent variable, and therefore may all be relevant to include in our model
+# We will keep all of them and test for multicollinearity after modeling
 
-# GLM AUC
-test1 <- test1 %>%
-  mutate(logistic.predicted.probability = predict(m1, newdata = test1, type='response'))
-test1.logistic.pred <- prediction(test1$logistic.predicted.probability, test1$outcome)
-test1.logistic.perf <- performance(test1.logistic.pred, "auc")
-cat('The auc score for test is', test1.logistic.perf@y.values[[1]], "\n")
+#######################GLM########################
 
-# check multicollinearity
-vif(m1)
-# All VIF less than 2.5 indicates low correlation of that predictor with other predictors.
-# No multicollinearity problem
+# Fit a glm model
+glm <- glm(outcome ~ sex + age + marital + birthplace + speakeng + 
+             educd + citizen + wkswork2 + uhrswork + yrinus, 
+          data = train, family = "binomial")
 
-###GBM example###
+summary(glm)
+# Since 'age' has a p-value of 0.312 > 0.5, we cannot conclude an effect of age on outcome. 
+# Other variables all have a p-value <2e-16, thus we can conclude their effects on our outcome.
+
+# Check multicollinearity
+vif(glm)
+# Since 'age' has a p-value of 0.312 > 0.5, we cannot conclude an effect of age on outcome. 
+# According to the vif redult, 'age' has a GVIF of 21.3; 'birthplace' has a GVIF of 6.78, and 'yrinus' has a GVIF of 27.23316
+# Indicating 'age', 'birthplace', and 'yrinus' show muticollinearity
+# We decide to drop these variables and fit a new glm model.
+
+
+# Fit a new glm model
+glm2 <- glm(outcome ~ sex + marital + speakeng + educd + citizen + wkswork2 + uhrswork, 
+           data = train, family = "binomial")
+summary(glm2)
+
+# Check multicollinearity again
+vif(glm2)
+# No multicollinearity issue
+
+# GLM2 AUC
+test <- test %>%
+  mutate(logistic.predicted.probability = predict(glm2, newdata = test, type='response'))
+test.logistic.pred <- prediction(test$logistic.predicted.probability, test$outcome)
+test.logistic.perf <- performance(test.logistic.pred, "auc")
+cat('The auc score for test is', test.logistic.perf@y.values[[1]], "\n")
+# The auc score for test is 0.8008963.
+# Task complete
+
+#######################GBM########################
+
+# When we are fitting GLM model, we find 'age', 'birthplace', and 'yrinus' show severe multicollinearity
+# Multicollinearity is a property of the data rather than the model
+# it is likely that they will also exhibit multicollinearity in other models (GBM model & RF model because they are both tree-based)
+# Thus, we choose not fit these three variables in other models as well
+
 # re-factor for GBM fitting
-train11 <- train1 %>% 
-  mutate(year = as.factor(year), 
-         sex = as.factor(sex), 
+train1 <- train %>% 
+  mutate(sex = as.factor(sex), 
          marital = as.factor(marital), 
          birthplace = as.factor(birthplace), 
          speakeng = as.factor(speakeng), 
@@ -103,9 +149,8 @@ train11 <- train1 %>%
          wkswork2 = as.factor(wkswork2)
   )
 
-test11 <- test1 %>% 
-  mutate(year = as.factor(year), 
-         sex = as.factor(sex), 
+test1 <- test %>% 
+  mutate(sex = as.factor(sex), 
          marital = as.factor(marital), 
          birthplace = as.factor(birthplace), 
          speakeng = as.factor(speakeng), 
@@ -114,38 +159,40 @@ test11 <- test1 %>%
          wkswork2 = as.factor(wkswork2)
   )
 
-# Fit GBM model
-m2 <- gbm(outcome ~ sex + age + marital + speakeng + educd + citizen + wkswork2 + uhrswork + yrinus, 
-          data = train11, 
+gbm <- gbm(outcome ~ sex + marital + speakeng + educd + citizen + wkswork2 + uhrswork, 
+          data = train1, 
           distribution = "bernoulli", 
           n.trees = 100, 
           interaction.depth = 3)
 
 # Print GBM model summary
-print(m2)
-summary(m2)
+print(gbm)
+# There were 7 predictors of which 7 had non-zero influence.
+summary(gbm)
 
 # Calculate GBM's AUC score
-# Make predictions on test data
-test11$gbm.predicted.probability <- predict(m2, newdata = test11, n.trees = 100, type = "response")
-test11.gbm.pred <- prediction(test11$gbm.predicted.probability, test11$outcome)
-test11.gbm.perf <- performance(test11.gbm.pred, "auc")
-cat('The AUC score for test is', test11.gbm.perf@y.values[[1]], "\n")
+# Make predictions on test1 data with n.trees = 100
+test$gbm.predicted.probability <- predict(gbm, newdata = test1, n.trees = 100, type = "response")
+test.gbm.pred <- prediction(test$gbm.predicted.probability, test$outcome)
+test.gbm.perf <- performance(test.gbm.pred, "auc")
+cat('The AUC score for test is', test.gbm.perf@y.values[[1]], "\n")
+# The AUC score for test is 0.8119833.
 
-###Random Forest example###
-m3 <- ranger(outcome ~ sex + age + marital + speakeng + educd + citizen + wkswork2 + uhrswork + yrinus, 
+################Random Forest####################
+
+# Fit the random forest model
+rf <- ranger(outcome ~ sex + marital + speakeng + educd + citizen + wkswork2 + uhrswork, 
              num.tree = 100, 
-             data = train1, 
+             data = train, 
              probability = TRUE)
 
-# AUC
-test1 <- test1 %>%
-  mutate(rf.predicted.probability = predict(m3, test1)$predictions[,2])
-
-test1.rf.pred <- prediction(test1$rf.predicted.probability, test1$outcome)
-test1.rf.perf <- performance(test1.rf.pred, "auc")
-cat('The auc score for test is', test1.rf.perf@y.values[[1]], "\n")
-
+# Calculate rf's AUC score
+test <- test %>%
+  mutate(rf.predicted.probability = predict(rf, test)$predictions[,2])
+test.rf.pred <- prediction(test$rf.predicted.probability, test$outcome)
+test.rf.perf <- performance(test.rf.pred, "auc")
+cat('The auc score for test is', test.rf.perf@y.values[[1]], "\n")
+# The auc score for test is 0.8058051.
 
 ##################################################
 
